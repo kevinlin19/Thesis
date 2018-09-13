@@ -24,6 +24,7 @@ diff_Y = Y_scale_max - Y_scale_min
 def Y_scale(data):
     scale_Y = 100*(data - Y_scale_min)/diff_Y
     return scale_Y
+
 # data scale fit
 x_train_scale = X_scale(x_train)
 y_train_scale = Y_scale(y_train)
@@ -31,6 +32,8 @@ x_valid_scale = X_scale(x_valid)
 y_valid_scale = Y_scale(y_valid)
 x_test_scale = X_scale(x_test)
 y_test_scale = Y_scale(y_test)
+
+
 def X_scale_inverse(data):
     X_inverse = (diff_X * data / 100) + X_scale_min
     return X_inverse
@@ -55,5 +58,39 @@ def mean_absolute_percentage_error(y_true, y_pred):
     #    y_true, y_pred = _check_1d_array(y_true, y_pred)
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
-def scaled_error(y_true, y_pred):
-    
+def MASE(y_true, y_pred):
+    y_true = check_array(y_true.reshape(-1, 1))
+    y_pred = check_array(y_pred.reshape(-1, 1))
+    mase = np.mean(np.abs(y_true - y_pred)/np.mean(np.abs(y_true[1:] - y_pred[:-1])))
+    return mase
+
+def AIC(model, y_true, y_pred):
+    number_params = model.count_params()
+    y_true = y_true.reshape(-1, 1)
+    y_pred = y_pred.reshape(-1, 1)
+    resid = y_true - y_pred
+    sse = np.sum(resid**2)
+    aic = 2*number_params - 2*np.log(sse)
+    return aic
+
+def BIC(model, y_true, y_pred):
+    number_params = model.count_params()
+    observation = len(y_true)
+    y_true = y_true.reshape(-1, 1)
+    y_pred = y_pred.reshape(-1, 1)
+    resid = y_true - y_pred
+    sse = np.sum(resid**2)
+    bic = number_params*np.log(sse/number_params) + observation*np.log(number_params)
+    return bic
+
+def SMAPE(y_true, y_pred):
+    y_true = y_true.reshape(-1, 1)
+    y_pred = y_pred.reshape(-1, 1)
+    smape = np.mean(np.abs(y_true - y_pred) * 2/(y_true + y_pred))
+    return smape
+
+def MADP(y_true, y_pred):
+    y_true = y_true.reshape(-1, 1)
+    y_pred = y_pred.reshape(-1, 1)
+    madp = np.sum(np.abs(y_true - y_pred)) / np.sum(np.abs(y_true))
+    return madp
