@@ -94,3 +94,6 @@ def MADP(y_true, y_pred):
     y_pred = y_pred.reshape(-1, 1)
     madp = np.sum(np.abs(y_true - y_pred)) / np.sum(np.abs(y_true))
     return madp
+
+
+
