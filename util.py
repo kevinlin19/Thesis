@@ -2,42 +2,49 @@ import pandas as pd
 from sklearn.utils import check_array
 import numpy as np
 
-# names = ['x_0', 'x_1','x_2', 'x_3', 'x_4', 'x_5', 'x_6', 'x_7', 'y_15']
-df = pd.read_csv('./result_eight_0706.csv', header=0, index_col=0)
-# training 50, valid 50, test 50
-x_train = df.iloc[:55, :8]
-y_train = df.iloc[:55, 8]
-x_valid = df.iloc[55:110, :8]
-y_valid = df.iloc[55:110, 8]
-x_test = df.iloc[110:, :8]
-y_test = df.iloc[110:, 8]
-# Scaling
-X_scale_max = df.iloc[:110, :8].max().max()
-X_scale_min = df.iloc[:110, :8].min().min()
-diff_X = X_scale_max - X_scale_min
-def X_scale(data):
+
+def X_scale(data,  X_scale_min, diff_X):
     scale = 100*(data - X_scale_min)/diff_X
     return scale
-Y_scale_max = df.iloc[:100, 8].max().max()
-Y_scale_min = df.iloc[:100, 8].min().min()
-diff_Y = Y_scale_max - Y_scale_min
-def Y_scale(data):
+
+def Y_scale(data, Y_scale_min, diff_Y):
     scale_Y = 100*(data - Y_scale_min)/diff_Y
     return scale_Y
 
-# data scale fit
-x_train_scale = X_scale(x_train)
-y_train_scale = Y_scale(y_train)
-x_valid_scale = X_scale(x_valid)
-y_valid_scale = Y_scale(y_valid)
-x_test_scale = X_scale(x_test)
-y_test_scale = Y_scale(y_test)
+def read_file(file):
+    # names = ['x_0', 'x_1','x_2', 'x_3', 'x_4', 'x_5', 'x_6', 'x_7', 'y_15']
+    df = pd.read_csv(file, header=0, index_col=0)
+    # training 50, valid 50, test 50
+    x_train = df.iloc[:52, :8]
+    y_train = df.iloc[:52, 8]
+    x_valid = df.iloc[52:92, :8]
+    y_valid = df.iloc[52:92, 8]
+    x_test = df.iloc[92:, :8]
+    y_test = df.iloc[92:, 8]
+    x_RL = df.iloc[52:, :8]
+    y_RL = df.iloc[52:, 8]
+    # Scaling
+    X_scale_max = df.iloc[:, :8].max().max()
+    X_scale_min = df.iloc[:, :8].min().min()
+    diff_X = X_scale_max - X_scale_min
+    Y_scale_max = df.iloc[:, 8].max().max()
+    Y_scale_min = df.iloc[:, 8].min().min()
+    diff_Y = Y_scale_max - Y_scale_min
+    # data scale fit
+    x_train_scale = X_scale(x_train, X_scale_min, diff_X)
+    y_train_scale = Y_scale(y_train, Y_scale_min, diff_Y)
+    x_valid_scale = X_scale(x_valid, X_scale_min, diff_X)
+    y_valid_scale = Y_scale(y_valid, Y_scale_min, diff_Y)
+    x_test_scale = X_scale(x_test, X_scale_min, diff_X)
+    y_test_scale = Y_scale(y_test, Y_scale_min, diff_Y)
+    x_RL_scale = X_scale(x_RL, X_scale_min, diff_X)
+    y_RL_scale = Y_scale(y_RL, Y_scale_min, diff_Y)
+    return diff_X, diff_Y, X_scale_min, Y_scale_min, x_train_scale, y_train_scale, x_valid_scale, y_valid_scale, x_test_scale, y_test_scale, x_RL_scale, y_RL_scale
 
-
-def X_scale_inverse(data):
+def X_scale_inverse(data, diff_X, X_scale_min):
     X_inverse = (diff_X * data / 100) + X_scale_min
     return X_inverse
-def Y_scale_inverse(data):
+def Y_scale_inverse(data, diff_Y, Y_scale_min):
     Y_inverse = (diff_Y * data / 100) + Y_scale_min
     return Y_inverse
 
@@ -96,5 +103,21 @@ def MADP(y_true, y_pred):
     return madp
 
 
-# test git
-
+def reject_outliers(data, m = 6., outlierConstant=1.5):
+    # d = np.abs(data - np.median(data))
+    # mdev = np.median(d)
+    # s = d/mdev if mdev else 0.
+    roll = data.rolling(window=3).mean()
+    upper_quartile = np.percentile(data, 75)
+    lower_quartile = np.percentile(data, 25)
+    IQR = (upper_quartile - lower_quartile) * outlierConstant
+    quartileSet = (lower_quartile - IQR, upper_quartile + IQR)
+    # print(IQR)
+    # print(quartileSet[0])
+    # print(quartileSet[1])
+    # data[s < m] = data
+    outlier_index = data[data > quartileSet[1]].index
+    # print(outlier_index)
+    data[outlier_index] = roll[outlier_index]
+    # print(data[outlier_index])
+    return data

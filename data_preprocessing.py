@@ -1,5 +1,13 @@
+'''
+116 weeks
+52 to train time series
+40 to train selection
+24 to test
+'''
 import pandas as pd
 import numpy as np
+from util import *
+import os
 
 # load data
 df = pd.read_csv("C:/Users/S.K.LIN/Desktop/project_big_company/data/wCompany_csv.csv")
@@ -15,7 +23,7 @@ df_filled = pd.merge(df_date, df_sort, how='left', on='TRANSACTION_DATE')
 df_filled = df_filled.fillna(0)
 # df_filled['AON7410L']
 # df_sort['AON7410L']
-# (df_filled == 0).astype(int).sum(axis=0).sort_values()
+first_hundred = (df_filled == 0).astype(int).sum(axis=0).sort_values()[:100].index
 '''
 The number of 0
 AON7410L                             135
@@ -49,27 +57,37 @@ SHIFT = 14
 BATCH = 128
 TRAIN_SIZE = 0.8
 # df_filled[TARGET].shift(-SHIFT)
-df_filled_TARGET = df_filled[['TRANSACTION_DATE', TARGET]]
-df = df_filled_TARGET.groupby([pd.Grouper(key='TRANSACTION_DATE', freq='W-MON')])[TARGET].sum()
-# df[df > 800000].index # '2017-01-23', '2017-04-24', '2017-06-12'
-# averaging smoothing
-df['2017-01-23'] = df[df.index.isin(['2017-01-23', '2017-01-30', '2017-01-16'])].mean()
-df['2017-04-24'] = df[df.index.isin(['2017-05-01', '2017-04-24', '2017-04-17'])].mean()
-df['2017-06-12'] = df[df.index.isin(['2017-06-12', '2017-06-19', '2017-06-05'])].mean()
-# save csv
-df.to_csv('./week.csv')
+for i, TARGET in enumerate(first_hundred):
+    df_filled_target = df_filled[['TRANSACTION_DATE', TARGET]]
+    try:
+        df_test = df_filled_target.groupby([pd.Grouper(key='TRANSACTION_DATE', freq='W-MON')])[TARGET].sum()
+        df_test = reject_outliers(df_test)
+        # df[df > 800000].index # '2017-01-23', '2017-04-24', '2017-06-12'
+        # averaging smoothing
+        # df['2017-01-23'] = df[df.index.isin(['2017-01-23', '2017-01-30', '2017-01-16'])].mean()
+        # df['2017-04-24'] = df[df.index.isin(['2017-05-01', '2017-04-24', '2017-04-17'])].mean()
+        # df['2017-06-12'] = df[df.index.isin(['2017-06-12', '2017-06-19', '2017-06-05'])].mean()
+        # save csv
+        print(df_test.shape)
+        print(i)
+        df_test.to_csv('./data_smooth_outliers/week_{}.csv'.format(TARGET))
+    except:
+        print(i)
+        print(TARGET)
 
-df = pd.read_csv('./week.csv', names=['Date', 'x_0'])
-df_0706 = df.copy()[13:]
-# df_0706.to_csv('./df_0706.csv')
-df_0706 = pd.read_csv('./df_0706.csv', names=['Date', 'x_0'])
-# len(df_0706) #131
-# len(df) #144
-x_eight = np.zeros(shape=[len(df_0706)-15, 8]) # (144-15, 8) (131-15, 8)
-for i in range(len(df_0706)-15):
-    x_eight[i] = df_0706['x_0'][i: i+8]
-
-df_eight = pd.DataFrame(x_eight, columns=['x_0', 'x_1','x_2', 'x_3', 'x_4', 'x_5', 'x_6', 'x_7'])
-df_move = pd.DataFrame(df_0706['x_0'].values[15:], columns=['y_15'])
-df_result = pd.concat([df_eight, df_move], axis=1)
-df_result.to_csv('./result_eight_0706.csv')
+path = './data_smooth_outliers'
+for file in os.listdir(path):
+    file_path = path + '/' + file
+    df = pd.read_csv(file_path, names=['Date', 'x_0'])
+    df_0706 = df.copy()[13:]
+    # df_0706.to_csv('./df_0706.csv')
+    # df_0706 = pd.read_csv('./df_0706.csv', names=['Date', 'x_0'])
+    # len(df_0706) #131
+    # len(df) #144
+    x_eight = np.zeros(shape=[len(df_0706)-15, 8]) # (144-15, 8) (131-15, 8)
+    for i in range(len(df_0706)-15):
+        x_eight[i] = df_0706['x_0'][i: i+8]
+    df_eight = pd.DataFrame(x_eight, columns=['x_0', 'x_1','x_2', 'x_3', 'x_4', 'x_5', 'x_6', 'x_7'])
+    df_move = pd.DataFrame(df_0706['x_0'].values[15:], columns=['y_15'])
+    df_result = pd.concat([df_eight, df_move], axis=1)
+    df_result.to_csv('./data_eight_input/result_eight_{}.csv'.format(file))
