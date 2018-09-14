@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.utils import check_array
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 
+
+
 ses = [SimpleExpSmoothing(x_train.values[i, :]).fit(smoothing_level=0.6, optimized=False).forecast() for i in range(len(x_train))]
 plt.plot(ses, label='pred')
 plt.plot(y_train.values, label='real')
